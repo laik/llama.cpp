@@ -1324,6 +1324,10 @@ bool gpt_params_find_arg(int argc, char ** argv, const std::string & arg, gpt_pa
         else { invalid_param = true; }
         return true;
     }
+    if (arg == "--no-warmup") {
+        params.warmup = false;
+        return true;
+    }
 #ifndef LOG_DISABLE_LOGS
     // Parse args for logging parameters
     if (log_param_single_parse(argv[i])) {
@@ -1446,6 +1450,7 @@ void gpt_params_print_usage(int /*argc*/, char ** argv, const gpt_params & param
     options.push_back({ "main infill", "       --in-prefix-bos",        "prefix BOS to user inputs, preceding the `--in-prefix` string" });
     options.push_back({ "main infill", "       --in-prefix STRING",     "string to prefix user inputs with (default: empty)" });
     options.push_back({ "main infill", "       --in-suffix STRING",     "string to suffix after user inputs with (default: empty)" });
+    options.push_back({ "main",        "       --no-warmup",            "skip warming up the model with an empty run" });
     options.push_back({ "server infill",
                                        "       --spm-infill",           "use Suffix/Prefix/Middle pattern for infill (instead of Prefix/Suffix/Middle) as some models prefer this. (default: %s)", params.spm_infill ? "enabled" : "disabled" });
 
@@ -2723,7 +2728,7 @@ std::string llama_chat_format_single(const struct llama_model * model,
         const llama_chat_msg & new_msg,
         bool add_ass) {
     std::ostringstream ss;
-    auto fmt_past_msg = llama_chat_apply_template(model, tmpl, past_msg, false);
+    auto fmt_past_msg = past_msg.empty() ? "" : llama_chat_apply_template(model, tmpl, past_msg, false);
     std::vector<llama_chat_msg> chat_new(past_msg);
     // if the past_msg ends with a newline, we must preserve it in the formatted version
     if (add_ass && !fmt_past_msg.empty() && fmt_past_msg.back() == '\n') {
