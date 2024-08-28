@@ -312,6 +312,8 @@ class GGUFWriter:
         self.add_key_value(key, val, GGUFValueType.STRING)
 
     def add_array(self, key: str, val: Sequence[Any]) -> None:
+        if len(val) == 0:
+            return
         self.add_key_value(key, val, GGUFValueType.ARRAY)
 
     @staticmethod
@@ -728,6 +730,9 @@ class GGUFWriter:
     def add_ssm_time_step_rank(self, value: int) -> None:
         self.add_uint32(Keys.SSM.TIME_STEP_RANK.format(arch=self.arch), value)
 
+    def add_ssm_dt_b_c_rms(self, value: bool) -> None:
+        self.add_bool(Keys.SSM.DT_B_C_RMS.format(arch=self.arch), value)
+
     def add_tokenizer_model(self, model: str) -> None:
         self.add_string(Keys.Tokenizer.MODEL, model)
 
@@ -826,6 +831,9 @@ class GGUFWriter:
     def add_eot_token_id(self, id: int) -> None:
         self.add_uint32(Keys.Tokenizer.EOT_ID, id)
 
+    def add_eom_token_id(self, id: int) -> None:
+        self.add_uint32(Keys.Tokenizer.EOM_ID, id)
+
     def _pack(self, fmt: str, value: Any, skip_pack_prefix: bool = False) -> bytes:
         pack_prefix = ''
         if not skip_pack_prefix:
@@ -845,7 +853,14 @@ class GGUFWriter:
             encoded_val = val.encode("utf-8") if isinstance(val, str) else val
             kv_data += self._pack("Q", len(encoded_val))
             kv_data += encoded_val
-        elif vtype == GGUFValueType.ARRAY and isinstance(val, Sequence) and val:
+        elif vtype == GGUFValueType.ARRAY:
+
+            if not isinstance(val, Sequence):
+                raise ValueError("Invalid GGUF metadata array, expecting sequence")
+
+            if len(val) == 0:
+                raise ValueError("Invalid GGUF metadata array. Empty array")
+
             if isinstance(val, bytes):
                 ltype = GGUFValueType.UINT8
             else:
